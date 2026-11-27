@@ -1,5 +1,5 @@
 #!/bin/bash
-# tmux-cc-navigator 설치: 스크립트를 ~/.tmux 에 복사하고, tmux 설정과 Claude Code hook을 연결함
+# tmux-cc-nav 설치: 스크립트를 ~/.tmux 에 복사하고, tmux 설정과 Claude Code hook을 연결함
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 
