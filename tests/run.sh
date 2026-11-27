@@ -10,7 +10,6 @@ eq()   { if [ "$2" = "$3" ]; then ok; else bad "$1" "기대: [$3]" "실제: [$2]
 has()  { case $2 in *"$3"*) ok;; *) bad "$1" "[$3] 가 없음" "실제: [$2]";; esac; }
 hasnt(){ case $2 in *"$3"*) bad "$1" "[$3] 가 있으면 안 됨" "실제: [$2]";; *) ok;; esac; }
 strip(){ LC_ALL=C sed 's/\x1b\[[0-9;]*m//g'; }
-plist(){ "$HOME/.tmux/cc-pick.sh" --list "$1" | tr '\0' '\n' | grep $'\t'; }  # 항목 첫 줄만
 section(){ printf '\n== %s\n' "$1"; }
 
 PIDS=()
@@ -189,31 +188,25 @@ tmux select-pane -t "$P0" -T '✳ 셸 제목'; tmux select-pane -t "$P0b" -T '�
 tmux select-pane -t s:0.0   # 활성 pane은 셸 쪽
 hook "$P1" done '{"cwd":"/tmp"}'; sleep 1; hook "$P2" wait; sleep 1; hook "$P0b" run '{"cwd":"/tmp"}'
 bash "$HOME/.tmux/cc-color.sh"; python3 "$HOME/.tmux/cc-sync.py"
-L=$(plist time)
+L=$("$HOME/.tmux/cc-pick.sh" --list time)
 eq "최근 순: 0,2,1, 기록 없는 창은 마지막" "$(cut -f1 <<<"$L" | tr '\n' ' ')" "0 2 1 3 "
 eq "대표 pane은 Claude pane" "$(head -1 <<<"$L" | cut -f2)" "$P0b"
 row=$(head -1 <<<"$L" | cut -f3 | strip)
 has "제목은 Claude pane 것 (특수문자 그대로)" "$row" 'Claude 제목 %s $(x) `y`'
 hasnt "셸 제목은 안 나옴" "$row" "셸 제목"
 has "창 이름 표시" "$row" "[B-둘]"
-G=$(plist group)
+G=$("$HOME/.tmux/cc-pick.sh" --list group)
 eq "그룹 순: A, B, C, 이름 없는 창 마지막" "$(cut -f1 <<<"$G" | tr '\n' ' ')" "1 0 2 3 "
 # 상태 칸 폭: 기호 1개든 원 4개든 화면 4칸
 for st in '' r rw rwd rwdw; do
   tmux set -w -t s:3 @ccw_st "$st"
   # 시각(11칸) + 공백 뒤 4칸이 상태, 그다음이 공백이어야 제목이 안 밀림
-  w=$(plist time | awk -F'\t' '$1==3{print $3}' | strip | python3 -c 'import sys;r=sys.stdin.read();print(repr(r[12:17]))')
+  w=$("$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}' | strip | python3 -c 'import sys;r=sys.stdin.read();print(repr(r[12:17]))')
   case $w in "'"????" '") ok;; *) bad "상태 칸 폭 4 ($st)" "실제: $w";; esac
 done
 tmux set -wu -t s:3 @ccw_st
-tmux set -w -t s:3 @ccw_st rwd \; set -w -t s:3 @ccw_t 1
-item=$("$HOME/.tmux/cc-pick.sh" --list time | python3 -c 'import sys;print([x for x in sys.stdin.read().split("\0") if x.startswith("3\t")][0])')
-has "2x2 윗줄: 왼위 노랑, 오위 빨강" "$item" $'\e[33m●\e[31m●'
-has "2x2 아랫줄: 시각 칸 아래, 왼아래 초록" "$item" $'\n            \e[32m●'
-eq "항목 수 = 창 수 (두 줄 항목도 하나)" "$("$HOME/.tmux/cc-pick.sh" --list time | tr -cd '\0' | wc -c | tr -d ' ')" "$(tmux list-windows | wc -l | tr -d ' ')"
-tmux set -w -t s:3 @ccw_st rw
-item=$("$HOME/.tmux/cc-pick.sh" --list time | python3 -c 'import sys;print([x for x in sys.stdin.read().split("\0") if x.startswith("3\t")][0])')
-hasnt "2개면 한 줄" "$item" $'\n'
+raw=$(tmux set -w -t s:3 @ccw_st rwd \; set -w -t s:3 @ccw_t 1; "$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}')
+has "여러 개는 색 원: 노랑, 빨강, 초록" "$raw" $'\e[33m●\e[31m●\e[32m●'
 pv=$("$HOME/.tmux/cc-pick.sh" --preview "$P0b" | head -1 | strip)
 eq "미리보기 첫 줄은 Claude 작업 폴더" "$pv" "/tmp"
 end_home

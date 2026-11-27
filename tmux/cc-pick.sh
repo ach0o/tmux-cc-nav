@@ -4,22 +4,21 @@
 # 구분자 \x1f: 탭은 IFS 공백이라 빈 칸(@cc 없음 등)이 사라짐
 # 색과 미리보기 크기는 tmux 옵션 @ccnav-* (cc.tmux.conf 에 기본값)
 IFS='|' read -r CB CN CT PV <<<"$(tmux display -p '#{@ccnav-color-bracket}|#{@ccnav-color-name}|#{@ccnav-color-title}|#{@ccnav-preview}')"
-# 상태 코드(r w d -) → 상태 칸. 윗줄 I1(항상 4칸 폭)과 아랫줄 I2
-#   Claude 1개: 기호(● ? ✓)  ·  2개: 색 원 2개  ·  3~4개: 색 원 2x2 (윗줄 왼위·오위, 아랫줄 왼아래·오아래)
-# 항목이 두 줄이 되므로 목록은 NUL 구분(fzf --read0)
-dot() { case $1 in r) printf '\e[33m●';; w) printf '\e[31m●';; d) printf '\e[32m●';; *) printf '\e[38;5;240m●';; esac; }
+# 상태 코드(r w d -) → 상태 칸 (항상 4칸 폭). Claude 1개는 기호(● ? ✓), 2~4개는 색 원을 화면 위치 순서로
 icon() {
-  local c=$1
-  I2=''
+  local c=$1 e=$'\e' out='' i n
   case ${#c} in
-    0) I1='    ' ;;
-    1) case $c in r) I1=$'\e[33m●';; w) I1=$'\e[31m?';; d) I1=$'\e[32m✓';; *) I1=$'\e[38;5;240m·';; esac; I1+=$'\e[0m   ' ;;
-    *) I1="$(dot "${c:0:1}")$(dot "${c:1:1}")"$'\e[0m  '
-       [ ${#c} -gt 2 ] && I2="$(dot "${c:2:1}")$([ ${#c} -gt 3 ] && dot "${c:3:1}")"$'\e[0m' ;;
+    0) printf '    '; return ;;
+    1) case $c in r) out="$e[33m●";; w) out="$e[31m?";; d) out="$e[32m✓";; *) out="$e[38;5;240m·";; esac
+       printf '%s%s   ' "$out" "$e[0m"; return ;;
   esac
+  for ((i=0; i<${#c}; i++)); do
+    case ${c:$i:1} in r) out+="$e[33m●";; w) out+="$e[31m●";; d) out+="$e[32m●";; *) out+="$e[38;5;240m●";; esac
+  done
+  n=$((4-${#c})); printf '%s%s%*s' "$out" "$e[0m" "$n" ''
 }
 list() {
-  # 창마다 한 항목(2x2면 두 줄). 대표 pane = 가장 최근에 움직인 Claude pane(@ccw_pane), 없으면 활성 pane
+  # 창마다 한 줄. 대표 pane = 가장 최근에 움직인 Claude pane(@ccw_pane), 없으면 활성 pane
   tmux list-panes -s -f '#{?@ccw_pane,#{==:#{pane_id},#{@ccw_pane}},#{pane_active}}' \
     -F $'#{?@ccw_t,#{@ccw_t},0}\x1f#{window_index}\x1f#{pane_id}\x1f#{@ccw_st}\x1f#{?#{automatic-rename},,#{window_name}}\x1f#{@cc_g}\x1f#{@cc_s}\x1f#{@cc_r}\x1f#{s/colour//:#{?@cc_col,#{@cc_col},colour#{@ccnav-color-bracket}}}\x1f#{s/^✳ //:pane_title}' |
   if [ "$1" = group ]; then
@@ -32,11 +31,7 @@ list() {
     if [ "$t" = 0 ]; then when='           '; else when=$(date -r "$t" '+%m-%d %H:%M' 2>/dev/null || date -d "@$t" '+%m-%d %H:%M'); fi
     e=$'\e'
     [ -n "$wn" ] && wn="$e[1;38;5;${CB}m[$e[38;5;${col}m${g:-$wn}$e[38;5;${CB}m$sep$e[38;5;${CN}m$rest$e[38;5;${CB}m]$e[0m "
-    icon "$st"
-    printf '%s\t%s\t\e[2m%s\e[0m %s %s\e[38;5;'"$CT"'m%s\e[0m' "$idx" "$pane" "$when" "$I1" "$wn" "$title"
-    # 2x2 아랫줄: 시각 칸(12칸) 아래에 맞춤
-    [ -n "$I2" ] && printf '\n            %s' "$I2"
-    printf '\0'
+    printf '%s\t%s\t\e[2m%s\e[0m %s %s\e[38;5;'"$CT"'m%s\e[0m\n' "$idx" "$pane" "$when" "$(icon "$st")" "$wn" "$title"
   done
 }
 [ "$1" = --list ] && { list "$2"; exit; }
@@ -55,15 +50,15 @@ me=~/.tmux/cc-pick.sh
 keys='j,k,g,G,q,p,s,t,/'
 python3 ~/.tmux/cc-sync.py
 cur=$(tmux display -p '#{window_index}')
-tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
-list time > "$tmp"
-# 열 때 커서를 지금 창 항목에 둠 (항목 번호는 NUL 구분으로 셈)
-pos=$(tr '\0\n' '\036\037' < "$tmp" | awk -v RS=$'\036' -F'\t' -v c="$cur" '$1==c{print NR; exit}')
-"$(command -v fzf || echo /opt/homebrew/bin/fzf)" < "$tmp" --read0 --bind "load:pos(${pos:-1})" --ansi --delimiter=$'\t' --with-nth=3.. --no-sort --reverse --cycle --prompt='최근> ' \
+items=$(list time)
+# 열 때 커서를 지금 창 줄에 둠
+pos=$(printf '%s\n' "$items" | awk -F'\t' -v c="$cur" '$1==c{print NR; exit}')
+printf '%s\n' "$items" |
+"$(command -v fzf || echo /opt/homebrew/bin/fzf)" --bind "load:pos(${pos:-1})" --ansi --delimiter=$'\t' --with-nth=3.. --no-sort --reverse --cycle --prompt='최근> ' \
   --preview "$me --preview {2}" --preview-window="down,$PV,border-top,follow,~1" \
   --header='j/k 이동 · Enter 이동 · / 검색(esc 복귀) · t 최근순 · s 그룹순 · p 미리보기 크기 · q 닫기' \
   --bind "j:down,k:up,g:first,G:last,q:abort" \
   --bind "p:change-preview-window(down,70%,border-top,follow,~1|hidden|down,$PV,border-top,follow,~1)+refresh-preview" \
   --bind "t:reload($me --list time)+change-prompt(최근> )+first,s:reload($me --list group)+change-prompt(그룹> )+first" \
   --bind "/:unbind($keys)+change-prompt(search> ),esc:rebind($keys)+clear-query+change-prompt(> )" |
-head -1 | cut -f1,2 | { IFS=$'\t' read -r w p && [ -n "$w" ] && tmux select-window -t ":$w" \; select-pane -t "$p"; }
+cut -f1,2 | { IFS=$'\t' read -r w p && [ -n "$w" ] && tmux select-window -t ":$w" \; select-pane -t "$p"; }
