@@ -25,7 +25,7 @@ start_tmux() {  # $1 = tmux.conf 내용
 }
 end_home() { tmux kill-server 2>/dev/null; unset TMUX; for p in "${PIDS[@]:-}"; do kill "$p" 2>/dev/null; done; PIDS=(); rm -rf "$T"; }
 fake_session() {  # $1 pane, $2 busy|idle, [$3 window id 덮어쓰기]  → 살아 있는 pid로 세션 파일
-  sleep 600 & local pid=$!; disown $pid; PIDS+=("$pid")
+  sleep 600 >/dev/null 2>&1 & local pid=$!; disown $pid; PIDS+=("$pid")
   local win=${3:-$(tmux display -p -t "$1" '#{window_id}')}
   mkdir -p "$HOME/.claude/sessions"
   printf '{"pid":%s,"tmux":"s:%s.%s","status":"%s","statusUpdatedAt":%s000}\n' "$pid" "$win" "$1" "$2" "$(date +%s)" > "$HOME/.claude/sessions/$pid.json"
@@ -93,10 +93,22 @@ python3 "$HOME/.tmux/cc-sync.py"
 eq "idle인데 run이면 done (Esc 중단)" "$(popt "${PS[1]}" @ccp)" done
 eq "busy이면서 wait는 유지" "$(popt "${PS[2]}" @ccp)" wait
 eq "hook 기록 없는 Claude pane은 세션 파일로 채움" "$(popt "${PS[4]}" @ccp)" done
-eq "창 상태 코드: pane 순서, 최대 4개" "$(wopt s:0 @ccw_st)" rdwd
+exp=$(tmux list-panes -t s:0 -F '#{pane_top} #{pane_left} #{@ccp}' | sort -n -k1,1 -k2,2 | awk '{c=substr($3,1,1); printf "%s", (c==""?"-":c)}' | cut -c1-4)
+eq "창 상태 코드: 화면 위치 순서, 최대 4개" "$(wopt s:0 @ccw_st)" "$exp"
 eq "대표 pane = 가장 최근에 움직인 pane" "$(wopt s:0 @ccw_pane)" "${PS[3]}"
 has "2x2 아이콘은 반칸 블록" "$(wopt s:0 @ccw_icon)" "▀"
 hasnt "아이콘 스타일에 쉼표 없음 (tmux 조건식이 깨짐)" "$(wopt s:0 @ccw_icon)" ","
+
+# 2x2 배치: 왼쪽 열을 먼저 나누면 pane 번호 순서(왼위, 왼아래, 오위, 오아래)와 화면 자리가 다름
+tmux new-window -d -t s:5; tmux split-window -d -h -t s:5.0; tmux split-window -d -v -t s:5.0; tmux split-window -d -v -t s:5.2
+for pos in "0 0 r" "0 1 w" "1 0 d" "1 1 r"; do set -- $pos
+  pid=$(tmux list-panes -t s:5 -F '#{pane_top} #{pane_left} #{pane_id}' | sort -n -k1,1 -k2,2 | awk -v r=$1 -v c=$2 'BEGIN{n=r*2+c} NR==n+1{print $3}')
+  case $3 in r) st=run b=busy;; w) st=wait b=busy;; d) st=done b=idle;; esac
+  hook "$pid" "$st"; fake_session "$pid" "$b"
+done
+python3 "$HOME/.tmux/cc-sync.py"
+eq "2x2 칸이 실제 pane 자리와 같음 (왼위·오위·왼아래·오아래)" "$(wopt s:5 @ccw_st)" rwdr
+tmux kill-window -t s:5
 
 # 비정상 종료: 세션 파일이 사라진 pane의 hook 기록은 지움
 rm "$HOME/.claude/sessions/"*.json; fake_session "${PS[0]}" busy
@@ -105,7 +117,7 @@ eq "세션 파일 없는 pane 기록 지움" "$(popt "${PS[3]}" @ccp_t)" ""
 eq "남은 Claude 1개면 기호 하나" "$(wopt s:0 @ccw_st)" r
 
 # 죽은 pid의 세션 파일은 무시
-sleep 600 & dead=$!; kill $dead; wait $dead 2>/dev/null
+sleep 600 >/dev/null 2>&1 & dead=$!; kill $dead; wait $dead 2>/dev/null
 printf '{"pid":%s,"tmux":"s:%s.%s","status":"busy"}\n' "$dead" "$(tmux display -p -t s:0 '#{window_id}')" "${PS[1]}" > "$HOME/.claude/sessions/dead.json"
 echo '{broken' > "$HOME/.claude/sessions/broken.json"
 python3 "$HOME/.tmux/cc-sync.py"; rc=$?

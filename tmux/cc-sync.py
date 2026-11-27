@@ -2,7 +2,7 @@
 """Claude pane 상태를 바로잡고 창마다 모아 창 옵션에 적는다. 목록을 열 때 불림.
 
 pane 옵션 (hook이 기록): @ccp = run|wait|done, @ccp_t = 시각, @ccp_cwd = 작업 폴더
-창 옵션 (여기서 기록):   @ccw_st   = pane 순서대로 상태 코드 (r w d -), 최대 4개
+창 옵션 (여기서 기록):   @ccw_st   = 화면 위치 순서(왼쪽 위부터)로 상태 코드 (r w d -), 최대 4개
                          @ccw_icon = 같은 내용을 tmux 스타일로 그린 것 (prefix W 목록용)
                          @ccw_t    = 가장 최근 시각, @ccw_pane = 가장 최근에 움직인 Claude pane
 바로잡기: Esc로 중단하면 Stop hook이 안 불려 run으로 남음. ~/.claude/sessions/<pid>.json 의 busy/idle 로 맞춤.
@@ -27,10 +27,10 @@ for f in glob.glob(os.path.expanduser('~/.claude/sessions/*.json')):
     sess[m.group(3)] = (m.group(2), d.get('status'), int(upd) // 1000 if str(upd).isdigit() else 0)
 
 F = '\x1f'
-rows = tmux('list-panes', '-a', '-F', F.join(['#{window_id}', '#{pane_id}', '#{@ccp}', '#{@ccp_t}', '#{@ccw_st}', '#{@cc}']))
+rows = tmux('list-panes', '-a', '-F', F.join(['#{window_id}', '#{pane_id}', '#{@ccp}', '#{@ccp_t}', '#{@ccw_st}', '#{@cc}', '#{pane_top}', '#{pane_left}']))
 wins, cmds, had, old = {}, [], set(), set()
 for line in rows.splitlines():
-    win, pane, st, t, wst, legacy = line.split(F)
+    win, pane, st, t, wst, legacy, top, left = line.split(F)
     if wst: had.add(win)
     if legacy: old.add(win)  # 예전 버전이 창에 남긴 @cc
     info = sess.get(pane)
@@ -53,7 +53,7 @@ for line in rows.splitlines():
         if new != st: cmds.append(['set', '-p', '-t', pane, '@ccp', new])
         if not t.isdigit():
             t = str(upd); cmds.append(['set', '-p', '-t', pane, '@ccp_t', t])
-    wins.setdefault(win, []).append((pane, new, int(t) if t.isdigit() else 0))
+    wins.setdefault(win, []).append((int(top), int(left), pane, new, int(t) if t.isdigit() else 0))
 
 COL = {'r': 'yellow', 'w': 'red', 'd': 'green', '-': 'colour240'}
 def icon(codes):
@@ -70,10 +70,12 @@ def icon(codes):
     return out + '#[default]'
 
 for win, panes in wins.items():
-    codes = ''.join({'run': 'r', 'wait': 'w', 'done': 'd'}.get(s, '-') for _, s, _ in panes)[:4]
-    last = max(panes, key=lambda p: p[2])
+    # 화면 위치 순서(위 → 아래, 왼쪽 → 오른쪽)라서 2x2 칸이 실제 pane 배치와 같은 자리에 옴
+    panes.sort()
+    codes = ''.join({'run': 'r', 'wait': 'w', 'done': 'd'}.get(s, '-') for _, _, _, s, _ in panes)[:4]
+    last = max(panes, key=lambda p: p[4])
     cmds += [['set', '-w', '-t', win, k, v] for k, v in
-             (('@ccw_st', codes), ('@ccw_icon', icon(codes)), ('@ccw_t', str(last[2])), ('@ccw_pane', last[0]))]
+             (('@ccw_st', codes), ('@ccw_icon', icon(codes)), ('@ccw_t', str(last[4])), ('@ccw_pane', last[2]))]
 for win in had - set(wins):
     cmds += [['set', '-wu', '-t', win, k] for k in ('@ccw_st', '@ccw_icon', '@ccw_t', '@ccw_pane')]
 
