@@ -12,7 +12,7 @@ tmux 창마다 Claude Code를 하나씩 띄워 쓸 때, 어느 세션이 실행 
 
 ![tmux 창은 터미널 안의 탭이고, 창마다 Claude를 하나씩 띄운다. prefix 키는 Ctrl-b를 눌렀다 뗀 뒤 다음 키를 누른다](docs/tmux-basics.svg)
 
-tmux는 터미널 하나 안에 창(탭)을 여러 개 띄우는 도구입니다. 이 도구는 창마다 Claude Code를 하나씩 띄워 쓰는 것을 전제로 합니다. tmux 키는 모두 **prefix**(기본 `Ctrl-b`)를 먼저 누르고 손을 뗀 뒤 다음 키를 누릅니다.
+tmux는 터미널 하나 안에 창(탭)을 여러 개 띄우는 도구입니다. 창마다 Claude Code를 하나씩 띄워 쓰는 것이 기본이고, 한 창을 pane으로 나눠 Claude를 여러 개 띄워도 됩니다. tmux 키는 모두 **prefix**(기본 `Ctrl-b`)를 먼저 누르고 손을 뗀 뒤 다음 키를 누릅니다.
 
 | 할 일 | 키나 명령 |
 |---|---|
@@ -73,6 +73,7 @@ cd tmux-cc-nav && ./install.sh
 | 노랑 `●` | 실행 중. 프롬프트를 보낸 뒤 답이 끝나기 전 |
 | 빨강 `?` | 입력 대기. 권한 확인이나 질문 때문에 멈춤 |
 | 초록 `✓` | 완료. Esc로 중단한 세션도 목록을 열 때 완료로 바로잡힘 |
+| 색 네모 2칸 | 한 창에 Claude가 2~4개. 2×2 칸에 pane 순서대로(왼쪽 위 → 오른쪽 위 → 왼쪽 아래 → 오른쪽 아래) 노랑·빨강·초록으로 상태 표시 |
 | `[앞-뒤]` | 직접 붙인 tmux 창 이름. `-`나 `_` 앞부분이 같으면 같은 색 |
 
 미리보기의 작업 폴더는 시작 폴더가 아니라 Claude가 지금 작업 중인 폴더입니다. 세션이 워크트리로 옮겨 가면 워크트리 경로와 그 브랜치가 나옵니다.
@@ -105,8 +106,8 @@ source-file ~/.tmux/cc.tmux.conf
 <details>
 <summary>어떻게 동작하나</summary>
 
-- **상태와 시각**: Claude Code hook이 `~/.tmux/cc-hook.sh`를 불러 tmux 창 옵션 `@cc`(상태), `@cc_t`(시각), `@cc_cwd`(작업 폴더)를 기록합니다.
-- **중단 바로잡기**: Esc로 중단하면 `Stop` hook이 불리지 않습니다. 그래서 목록을 열 때 `~/.tmux/cc-sync.py`가 `~/.claude/sessions/*.json`의 `busy`/`idle` 값으로 상태를 맞춥니다.
+- **상태와 시각**: Claude Code hook이 `~/.tmux/cc-hook.sh`를 불러, Claude가 도는 pane에 `@ccp`(상태), `@ccp_t`(시각), `@ccp_cwd`(작업 폴더)를 기록합니다. 목록을 열 때 `~/.tmux/cc-sync.py`가 이를 창마다 모읍니다. 한 창에 Claude가 여럿이면 가장 최근에 움직인 pane의 제목, 미리보기, 폴더를 보여 주고, 고르면 그 pane으로 이동합니다.
+- **중단 바로잡기**: Esc로 중단하면 `Stop` hook이 불리지 않습니다. 그래서 목록을 열 때 같은 스크립트가 `~/.claude/sessions/*.json`의 `busy`/`idle` 값으로 상태를 맞춥니다.
 - **그룹 색**: 창 이름을 바꿀 때 `~/.tmux/cc-color.sh`가 그룹마다 색을 정하고, 그 짝을 `~/.tmux/cc-groups`에 저장합니다. 색은 32개라서, 그룹이 32개를 넘으면 색이 겹칩니다.
 - **한영 전환**: `~/.tmux/abc`는 `abc.swift`를 빌드한 프로그램으로, macOS 입력 소스를 그 사람의 영문 자판(ABC, U.S. 등)으로 바꿉니다.
 
