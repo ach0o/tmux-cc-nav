@@ -23,18 +23,20 @@ icon() {
 list() {
   # 창마다 한 줄. 대표 pane = 가장 최근에 움직인 Claude pane(@ccw_pane), 없으면 활성 pane
   tmux list-panes -s -f '#{?@ccw_pane,#{==:#{pane_id},#{@ccw_pane}},#{pane_active}}' \
-    -F $'#{?@ccw_t,#{@ccw_t},0}\x1f#{window_index}\x1f#{pane_id}\x1f#{@ccw_st}\x1f#{?#{automatic-rename},,#{window_name}}\x1f#{@cc_g}\x1f#{@cc_s}\x1f#{@cc_r}\x1f#{s/colour//:#{?@cc_col,#{@cc_col},colour#{@ccnav-color-bracket}}}\x1f#{s/^✳ //:pane_title}' |
+    -F $'#{?@ccw_t,#{@ccw_t},0}\x1f#{window_index}\x1f#{pane_id}\x1f#{@ccw_st}\x1f#{?#{automatic-rename},,#{window_name}}\x1f#{@cc_g}\x1f#{@cc_s}\x1f#{@cc_r}\x1f#{s/colour//:#{?@cc_col,#{@cc_col},colour#{@ccnav-color-bracket}}}\x1f#{window_activity}\x1f#{s/^✳ //:pane_title}' |
   if [ "$1" = group ]; then
     # 그룹 키를 맨 앞에 붙여 정렬 후 떼어냄. 이름 없는 창은 맨 뒤(~)
     awk -F$'\x1f' -v OFS=$'\x1f' '{k=($6!="")?$6:(($5!="")?$5:"~"); print k,$0}' | LC_ALL=C sort -t$'\x1f' -k1,1 -k2,2nr | cut -d$'\x1f' -f2-
   else
     sort -t$'\x1f' -k1,1nr -k2,2n
   fi |
-  while IFS=$'\x1f' read -r t idx pane st wn g sep rest col title; do
-    if [ "$t" = 0 ]; then when='           '; else when=$(date -r "$t" '+%m-%d %H:%M' 2>/dev/null || date -d "@$t" '+%m-%d %H:%M'); fi
+  while IFS=$'\x1f' read -r t idx pane st wn g sep rest col act title; do
+    # Claude 기록이 없는 창은 tmux 마지막 출력 시각을 회색으로 (정렬은 그대로 맨 뒤)
+    d=$t tc=2; [ "$t" = 0 ] && d=$act tc='2;38;5;240'
+    when=$(date -r "$d" '+%m-%d %H:%M' 2>/dev/null || date -d "@$d" '+%m-%d %H:%M')
     e=$'\e'
     [ -n "$wn" ] && wn="$e[1;38;5;${CB}m[$e[38;5;${col}m${g:-$wn}$e[38;5;${CB}m$sep$e[38;5;${CN}m$rest$e[38;5;${CB}m]$e[0m "
-    printf '%s\t%s\t\e[2m%s\e[0m %s %s\e[38;5;'"$CT"'m%s\e[0m\n' "$idx" "$pane" "$when" "$(icon "$st")" "$wn" "$title"
+    printf '%s\t%s\t\e['"$tc"'m%s\e[0m %s %s\e[38;5;'"$CT"'m%s\e[0m\n' "$idx" "$pane" "$when" "$(icon "$st")" "$wn" "$title"
   done
 }
 [ "$1" = --list ] && { list "$2"; exit; }

@@ -192,6 +192,9 @@ bash "$HOME/.tmux/cc-color.sh"; python3 "$HOME/.tmux/cc-sync.py"
 L=$("$HOME/.tmux/cc-pick.sh" --list time)
 eq "최근 순: 0,2,1, 기록 없는 창은 마지막" "$(cut -f1 <<<"$L" | tr '\n' ' ')" "0 2 1 3 "
 eq "대표 pane은 Claude pane" "$(head -1 <<<"$L" | cut -f2)" "$P0b"
+r3=$(awk -F'\t' '$1==3{print $3}' <<<"$L")
+eq "기록 없는 창도 시각 표시 (tmux 마지막 출력)" "$(strip <<<"$r3" | cut -c1-11)" "$(date -r "$(tmux display -p -t s:3 '#{window_activity}')" '+%m-%d %H:%M')"
+has "기록 없는 창 시각은 회색" "$r3" $'\e[2;38;5;240m'
 row=$(head -1 <<<"$L" | cut -f3 | strip)
 has "제목은 Claude pane 것 (특수문자 그대로)" "$row" 'Claude 제목 %s $(x) `y`'
 hasnt "셸 제목은 안 나옴" "$row" "셸 제목"
