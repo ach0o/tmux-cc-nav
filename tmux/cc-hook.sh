@@ -4,7 +4,9 @@
 # 인자: run | wait | done | end. stdin은 hook 입력 JSON (cwd 필드 사용)
 [ -n "$TMUX_PANE" ] || exit 0
 p=$TMUX_PANE
-cwd=$(sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+# 맨 앞의 "cwd" 하나만 씀 (뒤쪽 tool_input 안에 같은 키가 있어도 무시). JSON 이스케이프 \" \\ \/ 는 풀어 줌
+cwd=$(grep -o '"cwd"[[:space:]]*:[[:space:]]*"\([^"\\]\|\\.\)*"' | head -1 |
+      sed -e 's/^"cwd"[[:space:]]*:[[:space:]]*"//' -e 's/"$//' -e 's/\\\(["\\/]\)/\1/g')
 if [ "$1" = end ]; then
   tmux set -pu -t "$p" @ccp \; set -pu -t "$p" @ccp_t \; set -pu -t "$p" @ccp_cwd 2>/dev/null
   exit 0

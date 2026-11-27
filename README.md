@@ -113,6 +113,14 @@ source-file ~/.tmux/cc.tmux.conf
 
 </details>
 
+## 테스트
+
+```bash
+tests/run.sh
+```
+
+임시 HOME과 따로 띄운 tmux 서버에서만 돌기 때문에, 쓰고 있는 tmux와 Claude 설정은 건드리지 않습니다. 설치와 제거, hook 입력, 상태 바로잡기, 한 창의 여러 pane, 특수문자 창 이름, 설정 옵션을 확인합니다.
+
 ## 지우기
 
 ```bash

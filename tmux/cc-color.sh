@@ -14,14 +14,19 @@ else
 fi |
 while read -r id auto name; do
   [ "$auto" = 1 ] && continue
+  [ -n "$name" ] || continue
   case $name in
+    # 구분자가 맨 앞이면(-abc) 앞부분이 비므로 이름 전체를 그룹으로
+    [-_]*) g=$name; sep=; rest= ;;
     *[-_]*) g=${name%%[-_]*}; sep=${name:${#g}:1}; rest=${name:${#g}+1} ;;
     *) g=$name; sep=; rest= ;;
   esac
-  c=$(awk -F'\t' -v g="$g" '$1==g{print $2; exit}' "$MAP")
+  key=${g//$'\t'/ }   # MAP은 탭 구분이라 그룹 이름의 탭은 공백으로
+  # awk -v 는 역슬래시를 해석하므로 ENVIRON 으로 넘김
+  c=$(K="$key" awk -F'\t' '$1==ENVIRON["K"]{print $2; exit}' "$MAP")
   if [ -z "$c" ]; then
     c=colour${PALETTE[$(( $(wc -l < "$MAP") % ${#PALETTE[@]} ))]}
-    printf '%s\t%s\n' "$g" "$c" >> "$MAP"
+    printf '%s\t%s\n' "$key" "$c" >> "$MAP"
   fi
   tmux set -w -t "$id" @cc_col "$c" \; set -w -t "$id" @cc_g "$g" \; set -w -t "$id" @cc_s "$sep" \; set -w -t "$id" @cc_r "$rest" 2>/dev/null
 done
