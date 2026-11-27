@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-label="A tmux window is a tab inside the terminal, one Claude Code per window. Keys: press Ctrl-b, release, then the next key.">
+  <style>
+    text { font-family: -apple-system, sans-serif; }
+    .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  </style>
+  <rect width="760" height="300" rx="12" fill="#ffffff"/>
+
+  <!-- 1. 터미널 한 개 = tmux 세션, 아래 줄 = 창 목록 -->
+  <text x="24" y="34" font-size="15" font-weight="700" fill="#1f2328">① Many windows (tabs) in one terminal, one Claude each</text>
+  <rect x="24" y="48" width="470" height="170" rx="8" fill="#1e1e1e"/>
+  <circle cx="42" cy="62" r="5" fill="#ff5f57"/><circle cx="58" cy="62" r="5" fill="#febc2e"/><circle cx="74" cy="62" r="5" fill="#28c840"/>
+  <text x="40" y="96" class="mono" font-size="13" fill="#d4d4d4">&gt; Retry failed payments up to 3 times</text>
+  <text x="40" y="120" class="mono" font-size="13" fill="#9e9e9e">⏺ Retries now back off at 1s, 2s and 4s.</text>
+  <text x="40" y="150" class="mono" font-size="12" fill="#6e6e6e">On screen now = Claude in window 1</text>
+  <rect x="24" y="190" width="470" height="28" fill="#000000"/>
+  <text x="34" y="209" class="mono" font-size="13" fill="#28c840">main</text>
+  <rect x="78" y="194" width="104" height="20" rx="3" fill="#0969da"/>
+  <text x="84" y="209" class="mono" font-size="13" fill="#ffffff">1:api-pay*</text>
+  <text x="192" y="209" class="mono" font-size="13" fill="#d4d4d4">2:api-auth</text>
+  <text x="292" y="209" class="mono" font-size="13" fill="#d4d4d4">3:web-dash</text>
+
+  <!-- 상태 줄 설명 -->
+  <path d="M130 218 v22" stroke="#0969da" stroke-width="1.5"/>
+  <text x="38" y="256" font-size="12.5" fill="#0969da">* = current window</text>
+  <path d="M235 218 v22" stroke="#57606a" stroke-width="1.5"/>
+  <text x="168" y="256" font-size="12.5" fill="#57606a">number:name</text>
+  <text x="38" y="282" font-size="12.5" fill="#57606a">Name windows <tspan class="mono" fill="#1f2328">group-name</tspan> and each group gets one color</text>
+
+  <!-- 2. prefix 키 누르는 법 -->
+  <text x="520" y="34" font-size="15" font-weight="700" fill="#1f2328">② How to press prefix</text>
+  <g class="mono" font-size="14">
+    <rect x="520" y="56" width="64" height="34" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="532" y="78" fill="#1f2328">Ctrl</text>
+    <text x="592" y="78" fill="#57606a">+</text>
+    <rect x="606" y="56" width="34" height="34" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="618" y="78" fill="#1f2328">b</text>
+  </g>
+  <text x="652" y="78" font-size="13" fill="#57606a">together</text>
+  <path d="M552 98 v24" stroke="#57606a" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="566" y="116" font-size="13" fill="#57606a">release, then</text>
+  <rect x="520" y="130" width="34" height="34" rx="6" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="532" y="152" class="mono" font-size="14" fill="#0969da">w</text>
+  <text x="566" y="152" font-size="13" fill="#1f2328">= this tool's list</text>
+  <text x="520" y="194" font-size="12.5" fill="#57606a"><tspan class="mono" fill="#1f2328">prefix w</tspan> in the docs means this</text>
+  <text x="520" y="214" font-size="12.5" fill="#57606a">or your own prefix key</text>
+
+  <defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="8" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 0 L5 10 z" fill="#57606a" transform="rotate(-90 5 5)"/></marker></defs>
+</svg>

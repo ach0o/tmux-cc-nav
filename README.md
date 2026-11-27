@@ -1,5 +1,7 @@
 # tmux-cc-nav
 
+**한국어** · [English](README.en.md)
+
 tmux 창마다 Claude Code를 하나씩 띄워 쓸 때, 어느 세션이 실행 중이고 어느 세션이 끝났는지 창 목록에서 한눈에 보게 해 줍니다. `prefix w`를 누르면 최근에 작업한 세션이 위로 오는 목록이 뜨고, 고르면 그 창으로 이동합니다.
 
 > tmux가 처음이면 [tmux가 처음이라면](#tmux가-처음이라면)을 먼저 보세요. `prefix w`가 무슨 뜻인지도 거기 있습니다.
@@ -27,7 +29,7 @@ tmux는 터미널 하나 안에 창(탭)을 여러 개 띄우는 도구입니다
 필요한 것: tmux, fzf, python3. tmux 3.6과 fzf 0.75에서 만들고 확인했습니다. 더 낮은 버전에서는 확인하지 않았습니다. macOS에서 한영 전환까지 쓰려면 Xcode 명령줄 도구(`swiftc`)도 필요합니다.
 
 ```bash
-brew install fzf
+brew install tmux fzf
 git clone https://github.com/ach0o/tmux-cc-nav.git
 cd tmux-cc-nav && ./install.sh
 ```
