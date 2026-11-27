@@ -12,7 +12,8 @@ tmux 창마다 Claude Code를 하나씩 띄워 쓸 때, 어느 세션이 실행 
 
 ```bash
 brew install fzf
-./install.sh
+git clone https://github.com/ach0o/tmux-cc-nav.git
+cd tmux-cc-nav && ./install.sh
 ```
 
 `install.sh`가 하는 일은 3가지입니다.
@@ -76,6 +77,15 @@ brew install fzf
 
 ## 지우기
 
-1. `~/.tmux.conf`에서 `source-file ~/.tmux/cc.tmux.conf` 줄을 지웁니다.
-2. `~/.claude/settings.json`에서 `~/.tmux/cc-hook.sh`를 부르는 hook 5개를 지웁니다.
-3. `~/.tmux/`의 `cc-*` 파일들과 `abc`, `abc.swift`를 지웁니다.
+```bash
+cd tmux-cc-nav && ./uninstall.sh
+```
+
+`uninstall.sh`는 `install.sh`가 넣은 것만 지웁니다.
+
+| 대상 | 지우는 것 |
+|---|---|
+| `~/.tmux/` | `cc-*` 파일, `abc`, `abc.swift`, 그룹 색 파일 `cc-groups` |
+| `~/.tmux.conf` | `source-file ~/.tmux/cc.tmux.conf` 줄 |
+| `~/.claude/settings.json` | `cc-hook.sh`를 부르는 hook만. 원본은 `settings.json.bak-cc-uninstall`로 백업 |
+| 실행 중인 tmux | `prefix w`를 기본 창 목록으로, `prefix W`와 선택 줄 색을 원래대로 |
