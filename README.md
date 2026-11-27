@@ -20,15 +20,15 @@ cd tmux-cc-nav && ./install.sh
 
 | 대상 | 바뀌는 것 |
 |---|---|
-| `~/.tmux/` | 스크립트 6개와 `cc.tmux.conf`를 복사 |
+| `~/.tmux/` | 스크립트들과 `cc.tmux.conf`를 복사 (덮어씀. 설정은 `~/.tmux.conf`에 두므로 남음) |
 | `~/.tmux.conf` | 끝에 `source-file ~/.tmux/cc.tmux.conf` 한 줄 추가 |
 | `~/.claude/settings.json` | hook 5개 추가. 기존 hook은 그대로, 원본은 `settings.json.bak-cc`로 백업 |
 
 두 번 실행해도 같은 줄이나 hook이 중복으로 들어가지 않습니다.
 
 기존 tmux 설정 중 2가지를 덮어씁니다.
-- `prefix w`: tmux 기본 창 목록 대신 fzf 목록이 뜹니다. 기본 목록은 `prefix W`에서 같은 정보와 함께 볼 수 있습니다.
-- `mode-style`: 목록과 copy mode의 선택 줄 색이 회색이 됩니다. 기본 노랑 위에서는 상태 기호 색이 안 보이기 때문입니다. 원래 색을 쓰려면 `cc.tmux.conf`의 `mode-style` 줄을 지우세요.
+- `prefix w`: tmux 기본 창 목록 대신 fzf 목록이 뜹니다. 기본 목록은 `prefix W`에서 같은 정보와 함께 볼 수 있습니다. 다른 키를 쓰려면 아래 설정에서 바꾸세요.
+- `mode-style`: 목록과 copy mode의 선택 줄 색이 회색이 됩니다. 기본 노랑 위에서는 상태 기호 색이 안 보이기 때문입니다. 원래 색을 쓰려면 아래 설정에서 `@ccnav-mode-style`을 `none`으로 두세요.
 
 설치 전에 이미 열려 있던 Claude 세션은 다시 시작해야 상태가 붙습니다.
 
@@ -61,9 +61,30 @@ cd tmux-cc-nav && ./install.sh
 
 미리보기의 작업 폴더는 시작 폴더가 아니라 Claude가 지금 작업 중인 폴더입니다. 세션이 워크트리로 옮겨 가면 워크트리 경로와 그 브랜치가 나옵니다.
 
-## 선택: prefix를 누르면 영문 입력으로 (macOS)
+## 설정
 
-한글 입력 상태에서는 `prefix w`의 `w`가 `ㅈ`으로 들어가 동작하지 않습니다. `~/.tmux/cc.tmux.conf` 맨 끝의 주석 3줄을 풀면, prefix를 누르는 순간 입력기가 영문 자판으로 바뀝니다. 주석을 풀 때 `C-b`를 자기 prefix 키로 바꾸세요.
+`~/.tmux.conf`에서 `source-file ~/.tmux/cc.tmux.conf` 줄 **위에** 옵션을 적으면 됩니다. 적지 않은 옵션은 기본값을 씁니다. 다시 설치해도 이 설정은 그대로 남습니다.
+
+```tmux
+set -g @ccnav-key-popup C-j       # fzf 목록을 prefix C-j 로
+set -g @ccnav-ime on              # prefix를 누르면 영문 입력으로 (macOS)
+source-file ~/.tmux/cc.tmux.conf
+```
+
+| 옵션 | 기본값 | 뜻 |
+|---|---|---|
+| `@ccnav-key-popup` | `w` | fzf 목록을 여는 prefix 키 |
+| `@ccnav-key-tree` | `W` | tmux 기본 목록(`choose-tree`)을 여는 prefix 키 |
+| `@ccnav-popup-size` | `90%` | fzf 팝업 폭과 높이 |
+| `@ccnav-preview` | `40%` | 미리보기 높이 (`p`로 70%, 숨김과 번갈아 바뀜) |
+| `@ccnav-color-bracket` | `44` | `[ ]`와 구분자 색 (256색 번호) |
+| `@ccnav-color-name` | `255` | 창 이름 뒷부분 색 |
+| `@ccnav-color-title` | `250` | Claude 세션 제목 색 |
+| `@ccnav-palette` | 32색 목록 | 그룹 색 후보, 공백으로 구분한 256색 번호 |
+| `@ccnav-mode-style` | `bg=colour238 fg=white` | 선택 줄 색. `none`이면 건드리지 않음 |
+| `@ccnav-ime` | `off` | `on`이면 prefix를 누르는 순간 입력기를 영문 자판으로 (macOS) |
+
+`@ccnav-ime`은 한글 입력 상태에서 `prefix w`의 `w`가 `ㅈ`으로 들어가 동작하지 않는 문제를 막습니다. 지금 쓰는 prefix 키를 그대로 씁니다.
 
 <details>
 <summary>어떻게 동작하나</summary>

@@ -6,8 +6,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 command -v fzf >/dev/null || [ -x /opt/homebrew/bin/fzf ] || { echo "fzf가 필요합니다: brew install fzf"; exit 1; }
 
 mkdir -p ~/.tmux
-cp "$here"/tmux/cc-hook.sh "$here"/tmux/cc-pick.sh "$here"/tmux/cc-sync.py "$here"/tmux/cc-color.sh "$here"/tmux/cc.tmux.conf "$here"/tmux/abc.swift ~/.tmux/
-chmod +x ~/.tmux/cc-hook.sh ~/.tmux/cc-pick.sh ~/.tmux/cc-color.sh
+cp "$here"/tmux/cc-hook.sh "$here"/tmux/cc-setup.sh "$here"/tmux/cc-pick.sh "$here"/tmux/cc-sync.py "$here"/tmux/cc-color.sh "$here"/tmux/cc.tmux.conf "$here"/tmux/abc.swift ~/.tmux/
+chmod +x ~/.tmux/cc-hook.sh ~/.tmux/cc-setup.sh ~/.tmux/cc-pick.sh ~/.tmux/cc-color.sh
 
 # 한영 전환 도구 (macOS, 선택 기능용). 빌드 실패해도 나머지는 동작
 if [ "$(uname)" = Darwin ] && command -v swiftc >/dev/null; then

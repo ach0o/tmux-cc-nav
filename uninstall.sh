@@ -27,11 +27,17 @@ if [ -f ~/.tmux.conf ]; then
   mv ~/.tmux.conf.tmp-cc ~/.tmux.conf
 fi
 
-rm -f ~/.tmux/cc-hook.sh ~/.tmux/cc-pick.sh ~/.tmux/cc-sync.py ~/.tmux/cc-color.sh ~/.tmux/cc.tmux.conf ~/.tmux/cc-groups ~/.tmux/abc ~/.tmux/abc.swift
+rm -f ~/.tmux/cc-hook.sh ~/.tmux/cc-setup.sh ~/.tmux/cc-pick.sh ~/.tmux/cc-sync.py ~/.tmux/cc-color.sh ~/.tmux/cc.tmux.conf ~/.tmux/cc-groups ~/.tmux/abc ~/.tmux/abc.swift
 
 # 실행 중인 tmux에서 키와 hook을 기본값으로 되돌림
 if [ -n "$TMUX" ]; then
-  tmux bind w choose-tree -Zw \; unbind W \; set -gu mode-style \; set-hook -gu window-renamed
+  o() { tmux show -gv "@ccnav-$1" 2>/dev/null; }
+  kp=$(o key-popup); kt=$(o key-tree); p=$(o prefix)
+  [ -n "$kp" ] && tmux unbind "$kp"; [ -n "$kt" ] && tmux unbind "$kt"
+  tmux bind w choose-tree -Zw \; set -gu mode-style \; set-hook -gu window-renamed
+  # 영문 전환(@ccnav-ime)을 썼으면 원래 prefix 키로 되돌림
+  if [ -n "$p" ]; then tmux unbind -n "$p" \; set -g prefix "$p" \; bind "$p" send-prefix; fi
+  for k in $(tmux show -g | awk '/^@ccnav-/{print $1}'); do tmux set -gu "$k"; done
   tmux source-file ~/.tmux.conf
 fi
 echo "제거 완료. 열려 있는 Claude 세션은 다시 시작하면 hook이 빠진 채로 뜹니다."
