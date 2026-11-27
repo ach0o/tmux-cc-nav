@@ -96,10 +96,10 @@ eq "hook 기록 없는 Claude pane은 세션 파일로 채움" "$(popt "${PS[4]}
 exp=$(tmux list-panes -t s:0 -F '#{pane_top} #{pane_left} #{@ccp}' | sort -n -k1,1 -k2,2 | awk '{c=substr($3,1,1); printf "%s", (c==""?"-":c)}' | cut -c1-4)
 eq "창 상태 코드: 화면 위치 순서, 최대 4개" "$(wopt s:0 @ccw_st)" "$exp"
 eq "대표 pane = 가장 최근에 움직인 pane" "$(wopt s:0 @ccw_pane)" "${PS[3]}"
-has "2x2 아이콘은 반칸 블록" "$(wopt s:0 @ccw_icon)" "▀"
+has "여러 개는 색 원 (prefix W)" "$(wopt s:0 @ccw_icon)" "●#[fg="
 hasnt "아이콘 스타일에 쉼표 없음 (tmux 조건식이 깨짐)" "$(wopt s:0 @ccw_icon)" ","
 
-# 2x2 배치: 왼쪽 열을 먼저 나누면 pane 번호 순서(왼위, 왼아래, 오위, 오아래)와 화면 자리가 다름
+# 2x2 pane 배치: 왼쪽 열을 먼저 나누면 pane 번호 순서(왼위, 왼아래, 오위, 오아래)와 화면 자리가 다름
 tmux new-window -d -t s:5; tmux split-window -d -h -t s:5.0; tmux split-window -d -v -t s:5.0; tmux split-window -d -v -t s:5.2
 for pos in "0 0 r" "0 1 w" "1 0 d" "1 1 r"; do set -- $pos
   pid=$(tmux list-panes -t s:5 -F '#{pane_top} #{pane_left} #{pane_id}' | sort -n -k1,1 -k2,2 | awk -v r=$1 -v c=$2 'BEGIN{n=r*2+c} NR==n+1{print $3}')
@@ -107,7 +107,7 @@ for pos in "0 0 r" "0 1 w" "1 0 d" "1 1 r"; do set -- $pos
   hook "$pid" "$st"; fake_session "$pid" "$b"
 done
 python3 "$HOME/.tmux/cc-sync.py"
-eq "2x2 칸이 실제 pane 자리와 같음 (왼위·오위·왼아래·오아래)" "$(wopt s:5 @ccw_st)" rwdr
+eq "원 순서가 화면 위치 순서 (왼위·오위·왼아래·오아래)" "$(wopt s:5 @ccw_st)" rwdr
 tmux kill-window -t s:5
 
 # 비정상 종료: 세션 파일이 사라진 pane의 hook 기록은 지움
@@ -197,17 +197,16 @@ hasnt "셸 제목은 안 나옴" "$row" "셸 제목"
 has "창 이름 표시" "$row" "[B-둘]"
 G=$("$HOME/.tmux/cc-pick.sh" --list group)
 eq "그룹 순: A, B, C, 이름 없는 창 마지막" "$(cut -f1 <<<"$G" | tr '\n' ' ')" "1 0 2 3 "
-# 상태 칸 폭: 기호 1개든 2x2든 화면 2칸
+# 상태 칸 폭: 기호 1개든 원 4개든 화면 4칸
 for st in '' r rw rwd rwdw; do
   tmux set -w -t s:3 @ccw_st "$st"
-  # 시각(11칸) + 공백 뒤 2칸이 상태, 그다음이 공백이어야 제목이 안 밀림
-  w=$("$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}' | strip | python3 -c 'import sys;r=sys.stdin.read();print(repr(r[12:15]))')
-  case $w in "'"??" '") ok;; *) bad "상태 칸 폭 2 ($st)" "실제: $w";; esac
+  # 시각(11칸) + 공백 뒤 4칸이 상태, 그다음이 공백이어야 제목이 안 밀림
+  w=$("$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}' | strip | python3 -c 'import sys;r=sys.stdin.read();print(repr(r[12:17]))')
+  case $w in "'"????" '") ok;; *) bad "상태 칸 폭 4 ($st)" "실제: $w";; esac
 done
 tmux set -wu -t s:3 @ccw_st
 raw=$(tmux set -w -t s:3 @ccw_st rwd \; set -w -t s:3 @ccw_t 1; "$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}')
-has "2x2: 윗칸 노랑/아랫칸 초록" "$raw" $'\e[33;42m▀'
-has "2x2: 아랫칸 없는 칸" "$raw" $'\e[31m▀'
+has "여러 개는 색 원: 노랑, 빨강, 초록" "$raw" $'\e[33m●\e[31m●\e[32m●'
 pv=$("$HOME/.tmux/cc-pick.sh" --preview "$P0b" | head -1 | strip)
 eq "미리보기 첫 줄은 Claude 작업 폴더" "$pv" "/tmp"
 end_home

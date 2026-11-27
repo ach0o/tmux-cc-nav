@@ -3,7 +3,7 @@
 
 pane 옵션 (hook이 기록): @ccp = run|wait|done, @ccp_t = 시각, @ccp_cwd = 작업 폴더
 창 옵션 (여기서 기록):   @ccw_st   = 화면 위치 순서(왼쪽 위부터)로 상태 코드 (r w d -), 최대 4개
-                         @ccw_icon = 같은 내용을 tmux 스타일로 그린 것 (prefix W 목록용)
+                         @ccw_icon = 같은 내용을 tmux 스타일로 그린 것 (prefix W 목록용, 4칸 폭)
                          @ccw_t    = 가장 최근 시각, @ccw_pane = 가장 최근에 움직인 Claude pane
 바로잡기: Esc로 중단하면 Stop hook이 안 불려 run으로 남음. ~/.claude/sessions/<pid>.json 의 busy/idle 로 맞춤.
 """
@@ -57,20 +57,13 @@ for line in rows.splitlines():
 
 COL = {'r': 'yellow', 'w': 'red', 'd': 'green', '-': 'colour240'}
 def icon(codes):
-    # 1개: 기호 그대로. 2~4개: 반칸 블록 ▀ 두 칸으로 2x2 (윗칸=글자색, 아랫칸=배경색)
+    # 항상 4칸 폭. 1개: 기호(● ? ✓). 2~4개: 색 원을 화면 위치 순서로
     if len(codes) == 1:
-        return {'r': '#[fg=yellow]●', 'w': '#[fg=red]?', 'd': '#[fg=green]✓', '-': '#[fg=colour240]·'}[codes] + '#[default] '
-    c = list(codes) + [''] * (4 - len(codes))
-    out = ''
-    for top, bot in ((c[0], c[2]), (c[1], c[3])):
-        if top and bot: out += f'#[fg={COL[top]} bg={COL[bot]}]▀'
-        elif top: out += f'#[fg={COL[top]} bg=default]▀'
-        elif bot: out += f'#[fg={COL[bot]} bg=default]▄'
-        else: out += '#[default] '
-    return out + '#[default]'
+        return {'r': '#[fg=yellow]●', 'w': '#[fg=red]?', 'd': '#[fg=green]✓', '-': '#[fg=colour240]·'}[codes] + '#[default]   '
+    return ''.join(f'#[fg={COL[c]}]●' for c in codes) + '#[default]' + ' ' * (4 - len(codes))
 
 for win, panes in wins.items():
-    # 화면 위치 순서(위 → 아래, 왼쪽 → 오른쪽)라서 2x2 칸이 실제 pane 배치와 같은 자리에 옴
+    # 화면 위치 순서(위 → 아래, 왼쪽 → 오른쪽)로 원을 놓아 실제 pane 배치를 읽는 순서와 같게 함
     panes.sort()
     codes = ''.join({'run': 'r', 'wait': 'w', 'done': 'd'}.get(s, '-') for _, _, _, s, _ in panes)[:4]
     last = max(panes, key=lambda p: p[4])
