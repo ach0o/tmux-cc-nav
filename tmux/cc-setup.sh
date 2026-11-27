@@ -7,8 +7,8 @@ tmux bind "$(o key-popup)" display-popup -E -w "$size" -h "$size" ~/.tmux/cc-pic
 
 # 창 한 줄: 시각 · 상태 · [그룹-나머지] · 세션 제목. 색은 옵션을 화면에 그릴 때 읽음
 b='colour#{@ccnav-color-bracket}'
-# 상태 칸(@ccw_icon)과 시각(@ccw_t)은 cc-sync.py 가 창마다 모아 둔 값
-fmt='#{?window_format,#[dim]#{?@ccw_t,#{t/f/%m-%d %H%M:@ccw_t},          }#[default] #{?@ccw_icon,#{@ccw_icon},    } '
+# 상태 칸(@ccw_icon, 폭 맞춤까지)과 시각(@ccw_t)은 cc-sync.py 가 창마다 모아 둔 값
+fmt='#{?window_format,#[dim]#{?@ccw_t,#{t/f/%m-%d %H%M:@ccw_t},          }#[default] #{@ccw_icon} '
 fmt+="#{?#{automatic-rename},,#[bold fg=$b][#[fg=#{?@cc_col,#{@cc_col},$b}]#{?@cc_g,#{@cc_g},#{window_name}}#[fg=$b]#{@cc_s}#[fg=colour#{@ccnav-color-name}]#{@cc_r}#[fg=$b]]#[default] }"
 # 제목은 가장 최근에 움직인 Claude pane(@ccw_pane) 것, 없으면 활성 pane
 fmt+='#[fg=colour#{@ccnav-color-title}]#{?@ccw_pane,#{P:#{?#{==:#{pane_id},#{@ccw_pane}},#{s/^✳ //:pane_title},}},#{s/^✳ //:pane_title}}#[default],#{?pane_format,#{s/^✳ //:pane_title},#{session_windows} windows#{?session_attached, (attached),}}}'

@@ -93,8 +93,9 @@ python3 "$HOME/.tmux/cc-sync.py"
 eq "idle인데 run이면 done (Esc 중단)" "$(popt "${PS[1]}" @ccp)" done
 eq "busy이면서 wait는 유지" "$(popt "${PS[2]}" @ccp)" wait
 eq "hook 기록 없는 Claude pane은 세션 파일로 채움" "$(popt "${PS[4]}" @ccp)" done
-exp=$(tmux list-panes -t s:0 -F '#{pane_top} #{pane_left} #{@ccp}' | sort -n -k1,1 -k2,2 | awk '{c=substr($3,1,1); printf "%s", (c==""?"-":c)}' | cut -c1-4)
-eq "창 상태 코드: 화면 위치 순서, 최대 4개" "$(wopt s:0 @ccw_st)" "$exp"
+exp=$(tmux list-panes -t s:0 -F '#{pane_top} #{pane_left} #{@ccp}' | sort -n -k1,1 -k2,2 | awk '{c=substr($3,1,1); printf "%s", (c==""?"-":c)}')
+eq "창 상태 코드: 화면 위치 순서" "$(wopt s:0 @ccw_st)" "$exp"
+eq "상태 칸 폭 = Claude가 가장 많은 창의 개수" "$(tmux show -gv @ccw_width)" 5
 eq "대표 pane = 가장 최근에 움직인 pane" "$(wopt s:0 @ccw_pane)" "${PS[3]}"
 has "여러 개는 색 원 (prefix W)" "$(wopt s:0 @ccw_icon)" "●#[fg="
 hasnt "아이콘 스타일에 쉼표 없음 (tmux 조건식이 깨짐)" "$(wopt s:0 @ccw_icon)" ","
@@ -197,12 +198,13 @@ hasnt "셸 제목은 안 나옴" "$row" "셸 제목"
 has "창 이름 표시" "$row" "[B-둘]"
 G=$("$HOME/.tmux/cc-pick.sh" --list group)
 eq "그룹 순: A, B, C, 이름 없는 창 마지막" "$(cut -f1 <<<"$G" | tr '\n' ' ')" "1 0 2 3 "
-# 상태 칸 폭: 기호 1개든 원 4개든 화면 4칸
-for st in '' r rw rwd rwdw; do
-  tmux set -w -t s:3 @ccw_st "$st"
-  # 시각(11칸) + 공백 뒤 4칸이 상태, 그다음이 공백이어야 제목이 안 밀림
-  w=$("$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}' | strip | python3 -c 'import sys;r=sys.stdin.read();print(repr(r[12:17]))')
-  case $w in "'"????" '") ok;; *) bad "상태 칸 폭 4 ($st)" "실제: $w";; esac
+# 상태 칸 폭 = @ccw_width. 시각(12칸) 뒤 그 폭만큼이 상태, 그다음 공백 하나, 그다음 바로 제목
+for c in "1:" "1:r" "2:r" "2:rw" "4:rwd" "4:rwdw" "1:rw"; do
+  wd=${c%%:*} st=${c#*:}
+  tmux set -g @ccw_width "$wd" \; set -w -t s:3 @ccw_st "$st"
+  exp=$(( ${#st} > wd ? ${#st} : wd ))
+  got=$("$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}' | strip | E=$exp python3 -c 'import os,sys;r=sys.stdin.read()[12:];e=int(os.environ["E"]);print("ok" if r[e]==" " and r[e+1]!=" " else repr(r[:e+3]))')
+  eq "상태 칸 폭 (폭 $wd, 상태 '$st')" "$got" ok
 done
 tmux set -wu -t s:3 @ccw_st
 raw=$(tmux set -w -t s:3 @ccw_st rwd \; set -w -t s:3 @ccw_t 1; "$HOME/.tmux/cc-pick.sh" --list time | awk -F'\t' '$1==3{print $3}')

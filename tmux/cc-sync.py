@@ -2,8 +2,8 @@
 """Claude pane 상태를 바로잡고 창마다 모아 창 옵션에 적는다. 목록을 열 때 불림.
 
 pane 옵션 (hook이 기록): @ccp = run|wait|done, @ccp_t = 시각, @ccp_cwd = 작업 폴더
-창 옵션 (여기서 기록):   @ccw_st   = 화면 위치 순서(왼쪽 위부터)로 상태 코드 (r w d -), 최대 4개
-                         @ccw_icon = 같은 내용을 tmux 스타일로 그린 것 (prefix W 목록용, 4칸 폭)
+창 옵션 (여기서 기록):   @ccw_st   = 화면 위치 순서(왼쪽 위부터)로 상태 코드 (r w d -)
+                         @ccw_icon = 같은 내용을 tmux 스타일로 그린 것 (prefix W 목록용). 폭은 @ccw_width 로 맞춤
                          @ccw_t    = 가장 최근 시각, @ccw_pane = 가장 최근에 움직인 Claude pane
 바로잡기: Esc로 중단하면 Stop hook이 안 불려 run으로 남음. ~/.claude/sessions/<pid>.json 의 busy/idle 로 맞춤.
 """
@@ -28,9 +28,10 @@ for f in glob.glob(os.path.expanduser('~/.claude/sessions/*.json')):
 
 F = '\x1f'
 rows = tmux('list-panes', '-a', '-F', F.join(['#{window_id}', '#{pane_id}', '#{@ccp}', '#{@ccp_t}', '#{@ccw_st}', '#{@cc}', '#{pane_top}', '#{pane_left}']))
-wins, cmds, had, old = {}, [], set(), set()
+wins, cmds, had, old, all_wins = {}, [], set(), set(), set()
 for line in rows.splitlines():
     win, pane, st, t, wst, legacy, top, left = line.split(F)
+    all_wins.add(win)
     if wst: had.add(win)
     if legacy: old.add(win)  # 예전 버전이 창에 남긴 @cc
     info = sess.get(pane)
@@ -56,21 +57,33 @@ for line in rows.splitlines():
     wins.setdefault(win, []).append((int(top), int(left), pane, new, int(t) if t.isdigit() else 0))
 
 COL = {'r': 'yellow', 'w': 'red', 'd': 'green', '-': 'colour240'}
-def icon(codes):
-    # 항상 4칸 폭. 1개: 기호(● ? ✓). 2~4개: 색 원을 화면 위치 순서로
-    if len(codes) == 1:
-        return {'r': '#[fg=yellow]●', 'w': '#[fg=red]?', 'd': '#[fg=green]✓', '-': '#[fg=colour240]·'}[codes] + '#[default]   '
-    return ''.join(f'#[fg={COL[c]}]●' for c in codes) + '#[default]' + ' ' * (4 - len(codes))
-
+codes_of = {}
 for win, panes in wins.items():
     # 화면 위치 순서(위 → 아래, 왼쪽 → 오른쪽)로 원을 놓아 실제 pane 배치를 읽는 순서와 같게 함
     panes.sort()
-    codes = ''.join({'run': 'r', 'wait': 'w', 'done': 'd'}.get(s, '-') for _, _, _, s, _ in panes)[:4]
-    last = max(panes, key=lambda p: p[4])
-    cmds += [['set', '-w', '-t', win, k, v] for k, v in
-             (('@ccw_st', codes), ('@ccw_icon', icon(codes)), ('@ccw_t', str(last[4])), ('@ccw_pane', last[2]))]
-for win in had - set(wins):
-    cmds += [['set', '-wu', '-t', win, k] for k in ('@ccw_st', '@ccw_icon', '@ccw_t', '@ccw_pane')]
+    codes_of[win] = ''.join({'run': 'r', 'wait': 'w', 'done': 'd'}.get(s, '-') for _, _, _, s, _ in panes)
+
+# 상태 칸 폭 = 지금 Claude가 가장 많은 창의 개수 (보통 1). 모든 줄을 이 폭에 맞춰 제목 시작 위치를 맞춤
+width = max([len(c) for c in codes_of.values()] + [1])
+
+def icon(codes):
+    # 1개: 기호(● ? ✓). 2개 이상: 색 원을 화면 위치 순서로. 빈 칸은 공백으로 채움
+    if len(codes) == 1:
+        out = {'r': '#[fg=yellow]●', 'w': '#[fg=red]?', 'd': '#[fg=green]✓', '-': '#[fg=colour240]·'}[codes] + '#[default]'
+    else:
+        out = ''.join(f'#[fg={COL[c]}]●' for c in codes) + ('#[default]' if codes else '')
+    return out + ' ' * (width - len(codes))
+
+cmds.append(['set', '-g', '@ccw_width', str(width)])
+for win in all_wins:
+    codes = codes_of.get(win, '')
+    cmds.append(['set', '-w', '-t', win, '@ccw_icon', icon(codes)])   # Claude 없는 창도 공백 칸
+    if codes:
+        last = max(wins[win], key=lambda p: p[4])
+        cmds += [['set', '-w', '-t', win, k, v] for k, v in
+                 (('@ccw_st', codes), ('@ccw_t', str(last[4])), ('@ccw_pane', last[2]))]
+    elif win in had:
+        cmds += [['set', '-wu', '-t', win, k] for k in ('@ccw_st', '@ccw_t', '@ccw_pane')]
 
 for win in old:
     cmds += [['set', '-wu', '-t', win, k] for k in ('@cc', '@cc_t', '@cc_cwd')]

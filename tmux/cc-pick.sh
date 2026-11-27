@@ -4,18 +4,21 @@
 # 구분자 \x1f: 탭은 IFS 공백이라 빈 칸(@cc 없음 등)이 사라짐
 # 색과 미리보기 크기는 tmux 옵션 @ccnav-* (cc.tmux.conf 에 기본값)
 IFS='|' read -r CB CN CT PV <<<"$(tmux display -p '#{@ccnav-color-bracket}|#{@ccnav-color-name}|#{@ccnav-color-title}|#{@ccnav-preview}')"
-# 상태 코드(r w d -) → 상태 칸 (항상 4칸 폭). Claude 1개는 기호(● ? ✓), 2~4개는 색 원을 화면 위치 순서로
+# 상태 코드(r w d -) → 상태 칸. 폭은 @ccw_width (Claude가 가장 많은 창의 개수, cc-sync.py가 정함)
+# Claude 1개는 기호(● ? ✓), 2개 이상은 색 원을 화면 위치 순서로
+WD=$(tmux show -gv @ccw_width 2>/dev/null); WD=${WD:-1}
 icon() {
-  local c=$1 e=$'\e' out='' i n
-  case ${#c} in
-    0) printf '    '; return ;;
-    1) case $c in r) out="$e[33m●";; w) out="$e[31m?";; d) out="$e[32m✓";; *) out="$e[38;5;240m·";; esac
-       printf '%s%s   ' "$out" "$e[0m"; return ;;
-  esac
-  for ((i=0; i<${#c}; i++)); do
-    case ${c:$i:1} in r) out+="$e[33m●";; w) out+="$e[31m●";; d) out+="$e[32m●";; *) out+="$e[38;5;240m●";; esac
-  done
-  n=$((4-${#c})); printf '%s%s%*s' "$out" "$e[0m" "$n" ''
+  local c=$1 e=$'\e' out='' i
+  if [ ${#c} -eq 1 ]; then
+    case $c in r) out="$e[33m●";; w) out="$e[31m?";; d) out="$e[32m✓";; *) out="$e[38;5;240m·";; esac
+  else
+    for ((i=0; i<${#c}; i++)); do
+      case ${c:$i:1} in r) out+="$e[33m●";; w) out+="$e[31m●";; d) out+="$e[32m●";; *) out+="$e[38;5;240m●";; esac
+    done
+  fi
+  [ -n "$out" ] && out+="$e[0m"
+  local n=$((WD - ${#c})); [ $n -lt 0 ] && n=0   # 폭 값이 오래된 경우 대비
+  printf '%s%*s' "$out" $n ''
 }
 list() {
   # 창마다 한 줄. 대표 pane = 가장 최근에 움직인 Claude pane(@ccw_pane), 없으면 활성 pane
